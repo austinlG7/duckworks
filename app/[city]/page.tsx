@@ -1,5 +1,5 @@
 // app/[city]/page.tsx
-import { cities } from "@/content/cities";
+import { cities } from "../../content/cities";
 
 export async function generateStaticParams() {
   return cities.map(c => ({ city: c.slug }));
