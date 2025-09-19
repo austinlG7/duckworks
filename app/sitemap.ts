@@ -1,5 +1,5 @@
 // app/sitemap.ts
-import { cities } from "@/content/cities";
+import { cities } from "../content/cities";
 export default function sitemap() {
   const base = "https://www.goduckworks.com"; // change after domain connects
   const staticPages = ["", "/services", "/about", "/contact"].map(p=>({
