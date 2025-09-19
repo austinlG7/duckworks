@@ -29,7 +29,7 @@ export default function Contact() {
       </form>
 
       <div className="mt-8 text-sm">
-        Prefer to talk? <a className="text-blue-700 underline" href="tel:+1XXXXXXXXXX">Call now</a> or{" "}
+        Prefer to talk? <a className="text-blue-700 underline" href="tel:+14694314515">Call now</a> or{" "}
         <a className="text-blue-700 underline" href="mailto:hello@goduckworks.com">email us</a>.
       </div>
     </div>

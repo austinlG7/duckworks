@@ -18,9 +18,9 @@ export default function Home() {
             <Link href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">
               Get a Free Estimate
             </Link>
-            <a href="tel:+1XXXXXXXXXX" className="rounded-2xl px-5 py-3 border">
-              Call Now
-            </a>
+          <a href="tel:+14694314515" className="rounded-2xl px-5 py-3 border">
+            Call Now
+          </a>
           </div>
           <ul className="mt-6 flex flex-wrap gap-2 text-xs text-slate-600">
             {["Licensed & Insured","24/7 Response","Warranty on All Installs"].map(b=>(
@@ -67,7 +67,10 @@ export default function Home() {
         </div>
         <div className="flex gap-3">
           <Link href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">Get My Free Quote</Link>
-          <a href="tel:+1XXXXXXXXXX" className="rounded-2xl px-5 py-3 border">Call</a>
+          <a href="tel:+14694314515" className="rounded-2xl px-5 py-3 border">
+            Call
+          </a>
+
         </div>
       </section>
     </div>
