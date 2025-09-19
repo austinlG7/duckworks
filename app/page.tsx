@@ -1,4 +1,6 @@
 // app/page.tsx
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
@@ -13,8 +15,12 @@ export default function Home() {
             Licensed & insured. Free on-site estimates. 24/7 response.
           </p>
           <div className="mt-6 flex gap-3">
-            <a href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">Get a Free Estimate</a>
-            <a href="tel:+1XXXXXXXXXX" className="rounded-2xl px-5 py-3 border">Call Now</a>
+            <Link href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">
+              Get a Free Estimate
+            </Link>
+            <a href="tel:+1XXXXXXXXXX" className="rounded-2xl px-5 py-3 border">
+              Call Now
+            </a>
           </div>
           <ul className="mt-6 flex flex-wrap gap-2 text-xs text-slate-600">
             {["Licensed & Insured","24/7 Response","Warranty on All Installs"].map(b=>(
@@ -49,7 +55,7 @@ export default function Home() {
           ))}
         </div>
         <div className="mt-8">
-          <a href="/services" className="underline text-blue-700">See all services →</a>
+          <Link href="/services" className="underline text-blue-700">See all services →</Link>
         </div>
       </section>
 
@@ -60,7 +66,7 @@ export default function Home() {
           <p className="text-slate-700">Free on-site estimates. No pressure—just honest advice.</p>
         </div>
         <div className="flex gap-3">
-          <a href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">Get My Free Quote</a>
+          <Link href="/contact" className="rounded-2xl px-5 py-3 bg-blue-600 text-white">Get My Free Quote</Link>
           <a href="tel:+1XXXXXXXXXX" className="rounded-2xl px-5 py-3 border">Call</a>
         </div>
       </section>
