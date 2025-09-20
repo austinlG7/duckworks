@@ -102,11 +102,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
+    } catch (e: unknown) {
+    const msg =
+      e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
     console.error("Contact API error:", e);
-    return NextResponse.json(
-      { ok: false, error: e?.message || "Server error" },
-      { status: 500 }
-    );
-  }
+    return NextResponse.json({ ok: false, error: String(msg) }, { status: 500 });
+     }
+
 }
