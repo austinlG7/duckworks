@@ -1,23 +1,35 @@
-// app/[city]/page.tsx
 import { cities } from "../../content/cities";
+import { notFound } from "next/navigation";
 
 export async function generateStaticParams() {
+  // you can keep this async or make it sync — either is fine
   return cities.map(c => ({ city: c.slug }));
 }
 export const dynamicParams = false;
 
-export default function CityPage({ params }: { params: { city: string } }) {
-  const c = cities.find(x => x.slug === params.city);
-  if (!c) return null;
+export default async function CityPage({
+  params,
+}: {
+  params: Promise<{ city: string }>;
+}) {
+  const { city } = await params; // 👈 lazy params in Next 15
+  const c = cities.find(x => x.slug === city);
+  if (!c) return notFound();
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold">Seamless Gutters in {c.city}, {c.state}</h1>
+      <h1 className="text-3xl font-bold">
+        Seamless Gutters in {c.city}, {c.state}
+      </h1>
       <p className="mt-3 text-slate-700">{c.intro}</p>
 
       {!!(c.neighborhoods?.length) && (
         <ul className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
-          {c.neighborhoods!.map(n => <li key={n} className="px-2 py-1 bg-white rounded border">{n}</li>)}
+          {c.neighborhoods!.map(n => (
+            <li key={n} className="px-2 py-1 bg-white rounded border">
+              {n}
+            </li>
+          ))}
         </ul>
       )}
 
@@ -34,7 +46,8 @@ export default function CityPage({ params }: { params: { city: string } }) {
         <div className="rounded-2xl bg-white p-6 shadow border">
           <h2 className="text-xl font-semibold">Local Considerations</h2>
           <p className="mt-3 text-slate-700">
-            Landmarks: {(c.landmarks ?? []).join(", ") || "—"}. Seasonal sizing and layouts tailored to local rainfall and roof pitch norms.
+            Landmarks: {(c.landmarks ?? []).join(", ") || "—"}. Seasonal sizing and layouts
+            tailored to local rainfall and roof pitch norms.
           </p>
         </div>
       </section>
@@ -43,7 +56,7 @@ export default function CityPage({ params }: { params: { city: string } }) {
         <section className="mt-8">
           <h2 className="text-xl font-semibold">FAQs for {c.city}</h2>
           <div className="mt-4 space-y-4">
-            {c.faqs!.map((f,i)=>(
+            {c.faqs!.map((f, i) => (
               <details key={i} className="rounded-2xl bg-white p-4 shadow border">
                 <summary className="cursor-pointer font-medium">{f.q}</summary>
                 <p className="mt-2 text-slate-700">{f.a}</p>

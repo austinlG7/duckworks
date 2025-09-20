@@ -8,7 +8,9 @@ export default function ContactForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("sending");
-    const data = Object.fromEntries(new FormData(e.currentTarget) as any);
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries()) as Record<string, string>;
+
 
     const res = await fetch("/api/contact", {
       method: "POST",
