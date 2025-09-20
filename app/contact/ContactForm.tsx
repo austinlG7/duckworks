@@ -34,7 +34,7 @@ export default function ContactForm() {
       <input className="border rounded-xl px-3 py-2" name="address" placeholder="Service Address (City, ZIP)" />
 
       <select className="border rounded-xl px-3 py-2" name="service">
-        {["Install", "Guards", "Repair", "Cleaning", "Drainage", "Other"].map((s) => (
+        {["Install","Guards","Repair","Cleaning","Drainage","Other"].map(s=>(
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
