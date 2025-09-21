@@ -3,12 +3,17 @@ import { useState } from "react";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
+type ApiResponse = {
+  ok?: boolean;
+  error?: string;
+};
+
 export default function ContactForm() {
   const [status, setStatus] = useState<Status>("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (status === "sending") return; // guard against double clicks
+    if (status === "sending") return; // prevent double submit
     setStatus("sending");
 
     const fd = new FormData(e.currentTarget);
@@ -19,19 +24,20 @@ export default function ContactForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(data),
       });
 
-      let body: any = null;
+      let body: ApiResponse | null = null;
       try {
-        body = await res.json();
+        body = (await res.json()) as ApiResponse;
       } catch {
-        // If no JSON, we’ll rely on res.ok
+        // ignore parse errors and rely on res.ok
       }
 
-      if (res.ok && (body?.ok ?? true)) {
+      const success = res.ok && (body?.ok ?? true);
+      if (success) {
         setStatus("sent");
         (e.currentTarget as HTMLFormElement).reset();
       } else {
@@ -98,9 +104,7 @@ export default function ContactForm() {
 
         {/* Row 2: Message (full width on md) */}
         <div className="md:col-span-3">
-          <label className="mb-1 block text-sm text-slate-400">
-            How can we help?
-          </label>
+          <label className="mb-1 block text-sm text-slate-400">How can we help?</label>
           <textarea
             className="min-h-32 w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500"
             name="message"
@@ -113,9 +117,7 @@ export default function ContactForm() {
         <div className="md:col-span-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="col-span-1 md:col-span-2 min-w-0">
-              <label className="mb-1 block text-sm text-slate-400">
-                Service Address
-              </label>
+              <label className="mb-1 block text-sm text-slate-400">Service Address</label>
               <input
                 className="w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500"
                 name="address"
@@ -125,33 +127,27 @@ export default function ContactForm() {
             </div>
 
             <div className="col-span-1 min-w-0">
-              <label className="mb-1 block text-sm text-slate-400">
-                Service
-              </label>
+              <label className="mb-1 block text-sm text-slate-400">Service</label>
               <select
                 className="block w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500 appearance-none"
                 name="service"
                 defaultValue="Install"
               >
-                {["Install", "Guards", "Repair", "Cleaning", "Drainage", "Other"].map(
-                  (s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  )
-                )}
+                {["Install", "Guards", "Repair", "Cleaning", "Drainage", "Other"].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
         </div>
       </div>
-      {/* <-- CLOSES MAIN GRID ABOVE */}
 
       {/* Actions + Status */}
       <div className="mt-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
         <p className="text-xs text-slate-500">
-          By submitting, you agree we may contact you by phone, text, or email
-          about your request.
+          By submitting, you agree we may contact you by phone, text, or email about your request.
         </p>
 
         <button
