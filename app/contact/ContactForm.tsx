@@ -13,6 +13,16 @@ export default function ContactForm() {
     const fd = new FormData(e.currentTarget);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
+    // type guard to check for `{ ok: true }`
+    function hasOkTrue(x: unknown): x is { ok: boolean } {
+      return (
+        typeof x === "object" &&
+        x !== null &&
+        "ok" in x &&
+        (x as Record<string, unknown>).ok === true
+      );
+    }
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -20,16 +30,16 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
-      // Try to parse JSON; if parsing fails but status is 2xx, still treat as success.
-      let json: any = null;
+      // try to parse JSON; if it fails but status is 2xx, still treat as success
+      let json: unknown = null;
       try {
         json = await res.json();
       } catch {
-        // ignore parse error (some proxies can return empty body with 200)
+        /* ignore parse error */
       }
 
       const success =
-        (res.ok && json?.ok === true) ||
+        (res.ok && hasOkTrue(json)) ||
         (res.ok && json === null); // 2xx with non-JSON body
 
       if (success) {
@@ -38,12 +48,12 @@ export default function ContactForm() {
         return;
       }
 
-      // If we got here, treat as failure
       setStatus("error");
     } catch {
       setStatus("error");
     }
   }
+
 
 
   // Consistent field styles (light UI, clear borders, good focus state)
