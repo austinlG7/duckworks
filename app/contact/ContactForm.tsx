@@ -8,38 +8,56 @@ export default function ContactForm() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (status === "sending") return; // guard against double clicks
     setStatus("sending");
 
-    const fd   = new FormData(e.currentTarget);
+    const fd = new FormData(e.currentTarget);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
         body: JSON.stringify(data),
       });
 
-      // ✅ any 2xx status → success
-      if (res.ok) {
+      let body: any = null;
+      try {
+        body = await res.json();
+      } catch {
+        // If no JSON, we’ll rely on res.ok
+      }
+
+      if (res.ok && (body?.ok ?? true)) {
         setStatus("sent");
-        e.currentTarget.reset();
+        (e.currentTarget as HTMLFormElement).reset();
       } else {
+        console.error("Contact submit failed:", res.status, body);
         setStatus("error");
       }
-    } catch {
+    } catch (err) {
+      console.error("Contact submit threw:", err);
       setStatus("error");
     }
   }
-
 
   return (
     <form
       onSubmit={onSubmit}
       className="mt-8 rounded-2xl border bg-white/5 p-6 shadow md:p-8"
     >
-      {/* honeypot */}
-      <input type="text" name="_gotcha" className="hidden" />
+      {/* honeypot (kept out of autofill/tab flow) */}
+      <input
+        type="text"
+        name="_gotcha"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", opacity: 0, height: 0, width: 0 }}
+      />
 
       {/* MAIN GRID */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -91,7 +109,7 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Row 3: Address + Service (nested grid for this row only) */}
+        {/* Row 3: Address + Service */}
         <div className="md:col-span-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="col-span-1 md:col-span-2 min-w-0">
@@ -147,12 +165,12 @@ export default function ContactForm() {
 
       {/* Feedback */}
       {status === "sent" && (
-        <p className="mt-4 text-sm text-green-500">
+        <p className="mt-4 text-sm text-green-500" role="status" aria-live="polite">
           Thanks! We got your request.
         </p>
       )}
       {status === "error" && (
-        <p className="mt-4 text-sm text-red-500">
+        <p className="mt-4 text-sm text-red-500" role="alert" aria-live="assertive">
           Something went wrong. Please call (469) 431-4515.
         </p>
       )}
