@@ -1,18 +1,16 @@
-
 // app/api/contact/route.ts
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-export const runtime = "nodejs"; // Resend SDK requires Node runtime
+export const runtime = "nodejs";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// small helper to sanitize/limit input
 function pick(x?: string, n = 2000) {
   return (x ?? "").toString().trim().slice(0, n);
 }
 
-/** GET /api/contact  -> quick health check (no secrets) */
+/** GET /api/contact  -> health check */
 export async function GET() {
   const hasKey = !!process.env.RESEND_API_KEY;
   const hasTo = !!(process.env.EMAIL_TO || "").trim();
@@ -21,13 +19,12 @@ export async function GET() {
     ok: true,
     runtime: "node",
     configured: { RESEND_API_KEY: hasKey, EMAIL_TO: hasTo, EMAIL_FROM: from },
-  });
+  }, { status: 200 });
 }
 
 /** POST /api/contact -> form submit */
 export async function POST(req: Request) {
   try {
-    // accept JSON or form-encoded
     const ct = req.headers.get("content-type") || "";
     let data: Record<string, string> = {};
     if (ct.includes("application/json")) {
@@ -37,8 +34,10 @@ export async function POST(req: Request) {
       form.forEach((v, k) => (data[k] = String(v)));
     }
 
-    // honeypot
-    if (data._gotcha) return NextResponse.json({ ok: true });
+    // honeypot -> treat as success (200) but do nothing
+    if (data._gotcha) {
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
 
     // fields
     const name = pick(data.name);
@@ -56,8 +55,8 @@ export async function POST(req: Request) {
     }
 
     // env checks
-    const to = (process.env.EMAIL_TO || "").trim(); // your receiving inbox
-    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim(); // must be verified or onresend.com
+    const to = (process.env.EMAIL_TO || "").trim();
+    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim();
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { ok: false, error: "Server not configured: RESEND_API_KEY missing" },
@@ -83,9 +82,9 @@ export async function POST(req: Request) {
     `;
 
     const result = await resend.emails.send({
-      from: `Duck Works <${from}>`, // ✅ FROM = your domain/alias (or notifications@onresend.com)
-      to: [to],                     // ✅ TO = where you receive the lead
-      replyTo: email,               // ✅ REPLY-TO = customer email (so “Reply” goes to them)
+      from: `Duck Works <${from}>`,
+      to: [to],
+      replyTo: email,
       subject: `New Quote Request from ${name}`,
       html,
       text:
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
         `Address: ${address}\nService: ${service}\n\n${message}`,
     });
 
-    // v6 returns { data, error }
+    // v6 shape: { data, error }
     if ("error" in result && result.error) {
       console.error("Resend error:", result.error);
       return NextResponse.json(
@@ -102,12 +101,13 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
-    } catch (e: unknown) {
+    // ✅ explicit 200 on success
+    return NextResponse.json({ ok: true }, { status: 200 });
+
+  } catch (e: unknown) {
     const msg =
       e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
     console.error("Contact API error:", e);
     return NextResponse.json({ ok: false, error: String(msg) }, { status: 500 });
-     }
-
+  }
 }
