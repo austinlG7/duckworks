@@ -13,10 +13,14 @@ export default function ContactForm() {
     const fd = new FormData(e.currentTarget);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
-    // narrow parsed JSON to something that might have { ok: true }
+    // type guard for { ok: true }
     function hasOkTrue(x: unknown): x is { ok: boolean } {
-      return typeof x === "object" && x !== null && "ok" in x &&
-        (x as Record<string, unknown>).ok === true;
+      return (
+        typeof x === "object" &&
+        x !== null &&
+        "ok" in x &&
+        (x as Record<string, unknown>).ok === true
+      );
     }
 
     try {
@@ -26,7 +30,6 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
-      // try to parse JSON; if parse fails we’ll keep json = null
       let json: unknown = null;
       try {
         json = await res.json();
@@ -50,7 +53,6 @@ export default function ContactForm() {
     }
   }
 
-
   return (
     <form
       onSubmit={onSubmit}
@@ -59,7 +61,7 @@ export default function ContactForm() {
       {/* honeypot */}
       <input type="text" name="_gotcha" className="hidden" />
 
-      {/* GRID */}
+      {/* MAIN GRID */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Row 1 */}
         <div className="col-span-1">
@@ -98,7 +100,9 @@ export default function ContactForm() {
 
         {/* Row 2: Message (full width on md) */}
         <div className="md:col-span-3">
-          <label className="mb-1 block text-sm text-slate-400">How can we help?</label>
+          <label className="mb-1 block text-sm text-slate-400">
+            How can we help?
+          </label>
           <textarea
             className="min-h-32 w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500"
             name="message"
@@ -106,37 +110,50 @@ export default function ContactForm() {
             required
           />
         </div>
-        {/* Row 3: Address + Service */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="col-span-1 md:col-span-2 min-w-0">
-            <label className="mb-1 block text-sm text-slate-400">Service Address</label>
-            <input
-              className="w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500"
-              name="address"
-              placeholder="City, ZIP"
-              autoComplete="address-line1"
-            />
-          </div>
 
-          <div className="col-span-1 min-w-0">
-            <label className="mb-1 block text-sm text-slate-400">Service</label>
-            <select
-              className="block w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500 appearance-none"
-              name="service"
-              defaultValue="Install"
-            >
-              {["Install","Guards","Repair","Cleaning","Drainage","Other"].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+        {/* Row 3: Address + Service (nested grid for this row only) */}
+        <div className="md:col-span-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="col-span-1 md:col-span-2 min-w-0">
+              <label className="mb-1 block text-sm text-slate-400">
+                Service Address
+              </label>
+              <input
+                className="w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500"
+                name="address"
+                placeholder="City, ZIP"
+                autoComplete="address-line1"
+              />
+            </div>
+
+            <div className="col-span-1 min-w-0">
+              <label className="mb-1 block text-sm text-slate-400">
+                Service
+              </label>
+              <select
+                className="block w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-slate-100 outline-none ring-0 focus:border-blue-500 appearance-none"
+                name="service"
+                defaultValue="Install"
+              >
+                {["Install", "Guards", "Repair", "Cleaning", "Drainage", "Other"].map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
           </div>
         </div>
-
+      </div>
+      {/* <-- CLOSES MAIN GRID ABOVE */}
 
       {/* Actions + Status */}
       <div className="mt-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
         <p className="text-xs text-slate-500">
-          By submitting, you agree we may contact you by phone, text, or email about your request.
+          By submitting, you agree we may contact you by phone, text, or email
+          about your request.
         </p>
 
         <button
@@ -150,7 +167,9 @@ export default function ContactForm() {
 
       {/* Feedback */}
       {status === "sent" && (
-        <p className="mt-4 text-sm text-green-500">Thanks! We got your request.</p>
+        <p className="mt-4 text-sm text-green-500">
+          Thanks! We got your request.
+        </p>
       )}
       {status === "error" && (
         <p className="mt-4 text-sm text-red-500">
