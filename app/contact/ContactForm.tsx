@@ -10,7 +10,7 @@ export default function ContactForm() {
     e.preventDefault();
     setStatus("sending");
 
-    const fd = new FormData(e.currentTarget);
+    const fd   = new FormData(e.currentTarget);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
     try {
@@ -20,21 +20,18 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
-      // ✅ Treat any 2xx as success (your server already returns 200 on success)
+      // ✅ any 2xx status → success
       if (res.ok) {
         setStatus("sent");
         e.currentTarget.reset();
-        return;
+      } else {
+        setStatus("error");
       }
-
-      // Only try to read JSON when it actually failed (to show a useful message later if you want)
-      // const errJson = await res.json().catch(() => null);
-      // const msg = (errJson && (errJson.error || errJson.message)) || `Request failed (${res.status})`;
-      setStatus("error");
     } catch {
       setStatus("error");
     }
   }
+
 
   return (
     <form
