@@ -16,10 +16,14 @@ export async function GET() {
   const hasKey = !!process.env.RESEND_API_KEY;
   const hasTo = !!(process.env.EMAIL_TO || "").trim();
   const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim();
+  const bcc = (process.env.EMAIL_BCC || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
   return NextResponse.json({
     ok: true,
     runtime: "node",
-    configured: { RESEND_API_KEY: hasKey, EMAIL_TO: hasTo, EMAIL_FROM: from },
+    configured: { RESEND_API_KEY: hasKey, EMAIL_TO: hasTo, EMAIL_FROM: from, EMAIL_BCC: bcc },
   });
 }
 
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
       form.forEach((v, k) => (data[k] = String(v)));
     }
 
-    // honeypot
+    // honeypot (return 200 but do nothing)
     if (data._gotcha) {
       console.warn("Honeypot triggered; returning ok.");
       return NextResponse.json({ ok: true }, { status: 200 });
@@ -58,20 +62,26 @@ export async function POST(req: Request) {
     }
 
     // env checks
-    const to = (process.env.EMAIL_TO || "").trim(); // your receiving inbox
-    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim(); // must be verified or onresend.com
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { ok: false, error: "Server not configured: RESEND_API_KEY missing" },
         { status: 500 }
       );
     }
+
+    const to = (process.env.EMAIL_TO || "").trim(); // receiving inbox
     if (!to) {
       return NextResponse.json(
         { ok: false, error: "Server not configured: EMAIL_TO missing" },
         { status: 500 }
       );
     }
+
+    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim(); // verified sender or onresend.com
+    const bccList = (process.env.EMAIL_BCC || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
 
     const html = `
       <h2>New Quote Request — Duck Works</h2>
@@ -88,6 +98,7 @@ export async function POST(req: Request) {
     const result = await resend.emails.send({
       from: `Duck Works <${from}>`,
       to: [to],
+      ...(bccList.length ? { bcc: bccList } : {}),
       replyTo: email,
       subject: `New Quote Request from ${name}`,
       html,
@@ -100,17 +111,16 @@ export async function POST(req: Request) {
     if (result.error) {
       console.error("Resend error:", result.error);
       return NextResponse.json(
-        { ok: false, error: result.error.message || "unknown" },
+        { ok: false, error: result.error.message || "unknown", to, from, bcc: bccList },
         { status: 500 }
       );
     }
 
-    // success: include message id so you can see it in DevTools console
+    // success: include message id and where it was sent
     return NextResponse.json(
-      { ok: true, id: result.data?.id ?? null },
+      { ok: true, id: result.data?.id ?? null, to, from, bcc: bccList },
       { status: 200 }
     );
-
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
     console.error("Contact API error:", e);
