@@ -1,3 +1,5 @@
+## api/contact/route.ts
+ts
 // app/api/contact/route.ts
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
@@ -16,14 +18,10 @@ export async function GET() {
   const hasKey = !!process.env.RESEND_API_KEY;
   const hasTo = !!(process.env.EMAIL_TO || "").trim();
   const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim();
-  const bcc = (process.env.EMAIL_BCC || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
   return NextResponse.json({
     ok: true,
     runtime: "node",
-    configured: { RESEND_API_KEY: hasKey, EMAIL_TO: hasTo, EMAIL_FROM: from, EMAIL_BCC: bcc },
+    configured: { RESEND_API_KEY: hasKey, EMAIL_TO: hasTo, EMAIL_FROM: from },
   });
 }
 
@@ -40,11 +38,8 @@ export async function POST(req: Request) {
       form.forEach((v, k) => (data[k] = String(v)));
     }
 
-    // honeypot (return 200 but do nothing)
-    if (data._gotcha) {
-      console.warn("Honeypot triggered; returning ok.");
-      return NextResponse.json({ ok: true }, { status: 200 });
-    }
+    // honeypot
+    if (data._gotcha) return NextResponse.json({ ok: true });
 
     // fields
     const name = pick(data.name);
@@ -62,26 +57,20 @@ export async function POST(req: Request) {
     }
 
     // env checks
+    const to = (process.env.EMAIL_TO || "").trim(); // your receiving inbox
+    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim(); // must be verified or onresend.com
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { ok: false, error: "Server not configured: RESEND_API_KEY missing" },
         { status: 500 }
       );
     }
-
-    const to = (process.env.EMAIL_TO || "").trim(); // receiving inbox
     if (!to) {
       return NextResponse.json(
         { ok: false, error: "Server not configured: EMAIL_TO missing" },
         { status: 500 }
       );
     }
-
-    const from = (process.env.EMAIL_FROM || "notifications@onresend.com").trim(); // verified sender or onresend.com
-    const bccList = (process.env.EMAIL_BCC || "")
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
 
     const html = `
       <h2>New Quote Request — Duck Works</h2>
@@ -94,12 +83,10 @@ export async function POST(req: Request) {
       <p>${message.replace(/\n/g, "<br/>")}</p>
     `;
 
-    // --- send the email ---
     const result = await resend.emails.send({
-      from: `Duck Works <${from}>`,
-      to: [to],
-      ...(bccList.length ? { bcc: bccList } : {}),
-      replyTo: email,
+      from: `Duck Works <${from}>`, // ✅ FROM = your domain/alias (or notifications@onresend.com)
+      to: [to],                     // ✅ TO = where you receive the lead
+      replyTo: email,               // ✅ REPLY-TO = customer email (so “Reply” goes to them)
       subject: `New Quote Request from ${name}`,
       html,
       text:
@@ -107,23 +94,21 @@ export async function POST(req: Request) {
         `Address: ${address}\nService: ${service}\n\n${message}`,
     });
 
-    // --- v6 shape: { data, error }  -> return useful info for debugging ---
-    if (result.error) {
+    // v6 returns { data, error }
+    if ("error" in result && result.error) {
       console.error("Resend error:", result.error);
       return NextResponse.json(
-        { ok: false, error: result.error.message || "unknown", to, from, bcc: bccList },
+        { ok: false, error: `Email failed: ${result.error.message || "unknown"}` },
         { status: 500 }
       );
     }
 
-    // success: include message id and where it was sent
-    return NextResponse.json(
-      { ok: true, id: result.data?.id ?? null, to, from, bcc: bccList },
-      { status: 200 }
-    );
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
+    return NextResponse.json({ ok: true });
+    } catch (e: unknown) {
+    const msg =
+      e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
     console.error("Contact API error:", e);
     return NextResponse.json({ ok: false, error: String(msg) }, { status: 500 });
-  }
+     }
+
 }
