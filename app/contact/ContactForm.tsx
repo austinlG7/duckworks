@@ -6,6 +6,7 @@ type Status = "idle" | "sending" | "sent" | "error";
 type ApiResponse = {
   ok?: boolean;
   error?: string;
+  id?: string | null;
 };
 
 export default function ContactForm() {
@@ -13,10 +14,13 @@ export default function ContactForm() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (status === "sending") return; // prevent double submit
+    if (status === "sending") return;
     setStatus("sending");
 
-    const fd = new FormData(e.currentTarget);
+    // 🔒 Save the form ref BEFORE any await (avoid SyntheticEvent pooling)
+    const form = e.currentTarget as HTMLFormElement;
+
+    const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
     try {
@@ -29,19 +33,31 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
+      // Try JSON first; if that fails, read as text so we can see what came back
       let body: ApiResponse | null = null;
+      let raw = "";
       try {
         body = (await res.json()) as ApiResponse;
       } catch {
-        // ignore parse errors and rely on res.ok
+        try {
+          raw = await res.text();
+        } catch {
+          /* ignore */
+        }
       }
 
       const success = res.ok && (body?.ok ?? true);
+      // Helpful console diagnostics
+      console.groupCollapsed("%cContact submit result", "color:#0af");
+      console.log("HTTP", res.status, res.statusText);
+      console.log("JSON", body);
+      if (!body) console.log("Raw response", raw);
+      console.groupEnd();
+
       if (success) {
+        form.reset();            // ✅ use saved ref
         setStatus("sent");
-        (e.currentTarget as HTMLFormElement).reset();
       } else {
-        console.error("Contact submit failed:", res.status, body);
         setStatus("error");
       }
     } catch (err) {
@@ -67,7 +83,6 @@ export default function ContactForm() {
 
       {/* MAIN GRID */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* Row 1 */}
         <div className="col-span-1">
           <label className="mb-1 block text-sm text-slate-400">Name</label>
           <input
@@ -102,7 +117,6 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Row 2: Message (full width on md) */}
         <div className="md:col-span-3">
           <label className="mb-1 block text-sm text-slate-400">How can we help?</label>
           <textarea
@@ -113,7 +127,6 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Row 3: Address + Service */}
         <div className="md:col-span-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="col-span-1 md:col-span-2 min-w-0">
@@ -144,7 +157,6 @@ export default function ContactForm() {
         </div>
       </div>
 
-      {/* Actions + Status */}
       <div className="mt-6 flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
         <p className="text-xs text-slate-500">
           By submitting, you agree we may contact you by phone, text, or email about your request.
@@ -159,7 +171,6 @@ export default function ContactForm() {
         </button>
       </div>
 
-      {/* Feedback */}
       {status === "sent" && (
         <p className="mt-4 text-sm text-green-500" role="status" aria-live="polite">
           Thanks! We got your request.

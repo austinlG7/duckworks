@@ -37,7 +37,10 @@ export async function POST(req: Request) {
     }
 
     // honeypot
-    if (data._gotcha) return NextResponse.json({ ok: true });
+    if (data._gotcha) {
+      console.warn("Honeypot triggered; returning ok.");
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
 
     // fields
     const name = pick(data.name);
@@ -81,10 +84,11 @@ export async function POST(req: Request) {
       <p>${message.replace(/\n/g, "<br/>")}</p>
     `;
 
+    // --- send the email ---
     const result = await resend.emails.send({
-      from: `Duck Works <${from}>`, // ✅ FROM = your domain/alias (or notifications@onresend.com)
-      to: [to],                     // ✅ TO = where you receive the lead
-      replyTo: email,               // ✅ REPLY-TO = customer email (so “Reply” goes to them)
+      from: `Duck Works <${from}>`,
+      to: [to],
+      replyTo: email,
       subject: `New Quote Request from ${name}`,
       html,
       text:
@@ -92,21 +96,24 @@ export async function POST(req: Request) {
         `Address: ${address}\nService: ${service}\n\n${message}`,
     });
 
-    // v6 returns { data, error }
-    if ("error" in result && result.error) {
+    // --- v6 shape: { data, error }  -> return useful info for debugging ---
+    if (result.error) {
       console.error("Resend error:", result.error);
       return NextResponse.json(
-        { ok: false, error: `Email failed: ${result.error.message || "unknown"}` },
+        { ok: false, error: result.error.message || "unknown" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ ok: true });
-    } catch (e: unknown) {
-    const msg =
-      e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
+    // success: include message id so you can see it in DevTools console
+    return NextResponse.json(
+      { ok: true, id: result.data?.id ?? null },
+      { status: 200 }
+    );
+
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : typeof e === "string" ? e : "Server error";
     console.error("Contact API error:", e);
     return NextResponse.json({ ok: false, error: String(msg) }, { status: 500 });
-     }
-
+  }
 }
