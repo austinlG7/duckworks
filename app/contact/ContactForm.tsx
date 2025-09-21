@@ -1,31 +1,50 @@
-//## contact/ContactForm.tsx
-
 "use client";
 import { useState } from "react";
 
 type Status = "idle" | "sending" | "sent" | "error";
+
+type ApiResponse = {
+  ok?: boolean;
+  error?: string;
+};
 
 export default function ContactForm() {
   const [status, setStatus] = useState<Status>("idle");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (status === "sending") return; // prevent double-submit
     setStatus("sending");
 
-    const fd   = new FormData(e.currentTarget);
+    // Save the form ref BEFORE any await so reset() is safe later
+    const form = e.currentTarget;
+
+    const fd = new FormData(form);
     const data = Object.fromEntries(fd.entries()) as Record<string, string>;
 
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify(data),
       });
 
-      // ✅ any 2xx status → success
-      if (res.ok) {
+      // Try JSON; if not JSON, fall back to res.ok
+      let body: ApiResponse | null = null;
+      try {
+        body = (await res.json()) as ApiResponse;
+      } catch {
+        // non-JSON response is fine; rely on res.ok
+      }
+
+      const success = res.ok && (body?.ok ?? true);
+
+      if (success) {
+        form.reset();       // use saved ref
         setStatus("sent");
-        e.currentTarget.reset();
       } else {
         setStatus("error");
       }
@@ -33,7 +52,6 @@ export default function ContactForm() {
       setStatus("error");
     }
   }
-
 
   return (
     <form
@@ -93,7 +111,7 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Row 3: Address + Service (nested grid for this row only) */}
+        {/* Row 3: Address + Service */}
         <div className="md:col-span-3">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="col-span-1 md:col-span-2 min-w-0">
@@ -149,12 +167,12 @@ export default function ContactForm() {
 
       {/* Feedback */}
       {status === "sent" && (
-        <p className="mt-4 text-sm text-green-500">
+        <p className="mt-4 text-sm text-green-500" role="status" aria-live="polite">
           Thanks! We got your request.
         </p>
       )}
       {status === "error" && (
-        <p className="mt-4 text-sm text-red-500">
+        <p className="mt-4 text-sm text-red-500" role="alert" aria-live="assertive">
           Something went wrong. Please call (469) 431-4515.
         </p>
       )}
