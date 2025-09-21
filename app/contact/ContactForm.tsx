@@ -20,16 +20,31 @@ export default function ContactForm() {
         body: JSON.stringify(data),
       });
 
-      if (res.ok) {
+      // Try to parse JSON; if parsing fails but status is 2xx, still treat as success.
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        // ignore parse error (some proxies can return empty body with 200)
+      }
+
+      const success =
+        (res.ok && json?.ok === true) ||
+        (res.ok && json === null); // 2xx with non-JSON body
+
+      if (success) {
         setStatus("sent");
         e.currentTarget.reset();
-      } else {
-        setStatus("error");
+        return;
       }
+
+      // If we got here, treat as failure
+      setStatus("error");
     } catch {
       setStatus("error");
     }
   }
+
 
   // Consistent field styles (light UI, clear borders, good focus state)
   const baseField =
